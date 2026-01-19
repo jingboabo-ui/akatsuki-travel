@@ -139,27 +139,56 @@
         </button>
     </footer>
 
-    <script>
+<script>
         function app() {
+            // ⚠️ 請確保這裡貼上你測試成功的那串 /exec 網址
+            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYyVQh6b76YpR4YziRt7nuDEMc0wxJVfOaIZMcOqipvn908IHcOIP96DXwm_2gpUGPzg/exec"; 
+
             return {
                 tab: 'home', cnyInput: '', db: { Schedule: [], TravelInfo: [], Checklist: [] },
                 selectedDate: '', showSaveModal: false, payer: '宜靜', note: '',
-                const SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxYyVQh6b76YpR4YziRt7nuDEMc0wxJVfOaIZMcOqipvn908IHcOIP96DXwm_2gpUGPzg/exec", // <--- 替換這裡
+                SCRIPT_URL: SCRIPT_URL,
 
                 async initData() {
-                    const res = await fetch(this.SCRIPT_URL);
-                    this.db = await res.json();
-                    if (this.db.Schedule.length > 0) this.selectedDate = this.uniqueDates[0];
+                    try {
+                        const res = await fetch(this.SCRIPT_URL);
+                        const data = await res.json();
+                        
+                        // 🛠️ 核心修復：處理 Google 的 ISO 日期格式並修正時差
+                        this.db.Schedule = (data.Schedule || []).map(item => {
+                            let d = new Date(item.Date);
+                            if (!isNaN(d.getTime())) {
+                                // 修正 Google 導出的時差問題，確保日期與試算表一致
+                                if (item.Date.toString().includes('T')) {
+                                    d.setHours(d.getHours() + 8); 
+                                }
+                                item.Date = d.toISOString().split('T')[0];
+                            }
+                            return item;
+                        });
+
+                        this.db.TravelInfo = data.TravelInfo || [];
+                        this.db.Checklist = data.Checklist || [];
+                        
+                        // 初始顯示第一天的行程
+                        if (this.uniqueDates.length > 0) {
+                            this.selectedDate = this.uniqueDates[0];
+                        }
+                    } catch (e) {
+                        console.error("資料讀取失敗", e);
+                    }
                 },
                 get uniqueDates() {
-                    return [...new Set(this.db.Schedule.map(i => i.Date))].sort();
+                    // 抓取所有不重複的日期並排序
+                    const dates = [...new Set(this.db.Schedule.map(i => i.Date.toString()))];
+                    return dates.filter(d => d && d !== "null").sort();
                 },
                 get filteredSchedule() {
                     return this.db.Schedule.filter(i => i.Date === this.selectedDate);
                 },
                 getInfo(cat) {
                     const item = this.db.TravelInfo.find(i => i.Category === cat);
-                    return item ? item.Detail : '尚未輸入';
+                    return item ? item.Detail : '尚未填寫';
                 },
                 handleInput(n) {
                     if (n === 'C') this.cnyInput = '';
@@ -171,12 +200,12 @@
                         cny: this.cnyInput, twd: Math.round(this.cnyInput * 4.5),
                         payer: this.payer, note: this.note
                     };
-                    await fetch(this.SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-                    alert('已記帳！');
-                    this.showSaveModal = false; this.cnyInput = ''; this.note = '';
+                    try {
+                        await fetch(this.SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                        alert('已記帳至雲端！');
+                        this.showSaveModal = false; this.cnyInput = ''; this.note = '';
+                    } catch (e) { alert('儲存失敗'); }
                 }
             }
         }
     </script>
-</body>
-</html>
