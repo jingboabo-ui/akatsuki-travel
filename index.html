@@ -3,99 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>曉・旅遊雲端實錄</title>
+    <title>曉・雲端戰略 App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@900&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #F2F2F2; font-family: 'Inter', sans-serif; overflow-x: hidden; }
-        .neo-brutalism { border: 4px solid #000; box-shadow: 8px 8px 0px #000; transition: all 0.1s; cursor: pointer; }
-        .neo-brutalism:active { transform: translate(4px, 4px); box-shadow: 0px 0px 0px #000; }
-        .akatsuki-red { color: #D32F2F; }
+        body { background-color: #F2F2F2; font-family: 'Inter', sans-serif; }
+        .neo-brutalism { border: 4px solid #000; box-shadow: 6px 6px 0px #000; transition: all 0.1s; cursor: pointer; }
+        .neo-brutalism:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
         .akatsuki-bg-red { background-color: #D32F2F; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .date-btn-active { background-color: #000 !important; color: #fff !important; }
     </style>
 </head>
-<body x-data="app()" x-init="fetchSchedule()">
-    <header class="p-6 pt-12">
-        <h1 class="text-4xl font-black italic tracking-tighter uppercase">Akatsuki <span class="akatsuki-red">Cloud</span></h1>
+<body x-data="app()" x-init="initData()">
+
+    <header class="p-4 pt-10 flex justify-between items-center bg-white border-b-4 border-black">
+        <h1 class="text-2xl font-black italic">AKATSUKI <span class="text-red-600">CORE</span></h1>
+        <button @click="initData()" class="p-2 border-2 border-black font-black text-xs">REFRESH</button>
     </header>
 
-    <main class="p-4 pb-40">
+    <main class="p-4 pb-32">
         <template x-if="tab === 'home'">
-            <div class="grid grid-cols-2 gap-4">
-                <div @click="tab = 'schedule'" class="col-span-2 p-8 bg-white neo-brutalism">
-                    <h2 class="text-4xl font-black leading-none">旅程<br>時間軸</h2>
-                    <p class="font-bold akatsuki-red mt-4 underline decoration-4">SYNCED FROM SHEETS →</p>
-                </div>
-                <div @click="tab = 'budget'" class="p-6 bg-white neo-brutalism flex flex-col justify-between aspect-square">
-                    <span class="text-4xl font-black">¥</span>
-                    <span class="font-black text-xl">人民幣記帳</span>
-                </div>
-                <div class="p-6 bg-black text-white neo-brutalism flex flex-col justify-center">
-                    <div class="space-y-2"><div class="h-1 w-full bg-red-600"></div><div class="h-1 w-1/2 bg-red-600"></div></div>
-                    <span class="mt-4 font-black italic text-[10px] akatsuki-red">DATA SECURED</span>
-                </div>
-            </div>
-        </template>
-
-        <template x-if="tab === 'budget'">
-            <div class="space-y-6">
-                <div class="p-8 bg-black text-white neo-brutalism">
-                    <div class="text-xs akatsuki-red font-black">Input CNY</div>
-                    <div class="text-6xl font-black text-right mt-2" x-text="cnyInput || '0'"></div>
-                    <div class="mt-6 pt-4 border-t border-gray-800 flex justify-between items-center">
-                        <span class="text-gray-500 font-bold italic">Rate 1 : 4.5</span>
-                        <span class="text-2xl akatsuki-red font-black">≈ NT$ <span x-text="Math.round(cnyInput * 4.5)"></span></span>
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-4 bg-black text-white neo-brutalism col-span-2">
+                        <p class="text-[10px] text-red-600 font-bold uppercase">Flight Info</p>
+                        <div class="mt-2 text-sm font-bold">
+                            去程：<span x-text="getInfo('Flight_Go')"></span><br>
+                            回程：<span x-text="getInfo('Flight_Back')"></span>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-white neo-brutalism col-span-2">
+                        <p class="text-[10px] text-gray-400 font-bold uppercase">Accommodation</p>
+                        <p class="font-black text-lg" x-text="getInfo('Hotel_Name')"></p>
+                        <p class="text-xs font-bold mt-1" x-text="getInfo('Hotel_Addr')"></p>
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <template x-for="n in ['1','2','3','4','5','6','7','8','9','C','0','SAVE']">
-                        <button @click="handleInput(n)" class="p-6 bg-white neo-brutalism font-black text-2xl h-20 flex items-center justify-center" :class="n === 'SAVE' ? 'akatsuki-bg-red text-white' : ''" x-text="n"></button>
-                    </template>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div @click="tab = 'schedule'" class="col-span-2 p-6 bg-white neo-brutalism flex justify-between items-center">
+                        <span class="text-3xl font-black italic">行程時間軸</span>
+                        <span class="text-2xl">→</span>
+                    </div>
+                    <div @click="tab = 'budget'" class="p-6 bg-white neo-brutalism flex flex-col justify-between aspect-square">
+                        <span class="text-4xl font-black text-red-600">¥</span>
+                        <span class="font-black">多人記帳</span>
+                    </div>
+                    <div @click="tab = 'checklist'" class="p-6 bg-white neo-brutalism flex flex-col justify-between aspect-square">
+                        <span class="text-4xl">📜</span>
+                        <span class="font-black">必備清單</span>
+                    </div>
                 </div>
             </div>
         </template>
 
         <template x-if="tab === 'schedule'">
             <div class="space-y-4">
-                <button @click="fetchSchedule()" class="w-full py-2 bg-gray-200 font-black text-[10px] neo-brutalism mb-4 tracking-widest">RELOAD DATA ↻</button>
-                <div class="border-l-8 border-black ml-2 pl-6 space-y-6">
-                    <template x-for="item in scheduleData">
-                        <div class="p-4 bg-white neo-brutalism">
-                            <p class="text-xs font-black akatsuki-red" x-text="item.Time"></p>
-                            <h3 class="text-xl font-black" x-text="item.Activity"></h3>
-                            <p class="text-[10px] text-gray-400 font-bold" x-text="item.Date"></p>
+                <div class="flex overflow-x-auto space-x-2 pb-4 no-scrollbar">
+                    <template x-for="date in uniqueDates">
+                        <button @click="selectedDate = date" 
+                                :class="selectedDate === date ? 'date-btn-active' : ''"
+                                class="px-6 py-3 bg-white border-4 border-black font-black whitespace-nowrap" 
+                                x-text="date"></button>
+                    </template>
+                </div>
+                <div class="border-l-8 border-black ml-3 pl-6 space-y-6">
+                    <template x-for="item in filteredSchedule">
+                        <div class="p-4 bg-white neo-brutalism relative">
+                            <div class="absolute -left-10 top-5 w-4 h-4 bg-red-600 border-2 border-black rounded-full"></div>
+                            <p class="text-xl font-black text-red-600 italic" x-text="item.Time"></p>
+                            <h3 class="text-xl font-black mt-1" x-text="item.Activity"></h3>
+                            <p class="text-xs font-bold text-gray-500 mt-2 bg-gray-100 p-2 border-l-4 border-black" x-text="item.Note"></p>
                         </div>
                     </template>
                 </div>
             </div>
         </template>
+
+        <template x-if="tab === 'budget'">
+            <div class="space-y-4">
+                <div class="p-6 bg-black text-white neo-brutalism">
+                    <p class="text-xs text-red-600 font-bold uppercase">CNY To TWD</p>
+                    <div class="text-6xl font-black text-right mt-2 truncate" x-text="cnyInput || '0'"></div>
+                    <p class="text-right text-red-600 font-black text-xl mt-4">≈ NT$ <span x-text="Math.round(cnyInput * 4.5)"></span></p>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <template x-for="n in ['1','2','3','4','5','6','7','8','9','C','0','SAVE']">
+                        <button @click="handleInput(n)" class="p-6 bg-white neo-brutalism font-black text-2xl h-20" :class="n === 'SAVE' ? 'akatsuki-bg-red text-white' : ''" x-text="n"></button>
+                    </template>
+                </div>
+            </div>
+        </template>
+
+        <template x-if="tab === 'checklist'">
+            <div class="space-y-6">
+                <template x-for="cat in ['APP', 'Ticket', 'Other']">
+                    <div>
+                        <h2 class="text-xl font-black bg-black text-white px-2 inline-block mb-3" x-text="cat"></h2>
+                        <div class="space-y-2">
+                            <template x-for="item in db.Checklist.filter(i => i.Type === cat)">
+                                <div class="p-3 bg-white border-2 border-black flex items-center">
+                                    <input type="checkbox" class="w-5 h-5 border-2 border-black mr-3">
+                                    <span class="font-bold" x-text="item.Item"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </template>
     </main>
 
-    <footer class="fixed bottom-0 w-full p-6 flex justify-center">
-        <button @click="tab = 'home'" class="w-full max-w-md py-4 akatsuki-bg-red text-white neo-brutalism font-black text-xl tracking-[0.3em]">HOME / MENU</button>
+    <template x-if="showSaveModal">
+        <div class="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-[100]">
+            <div class="bg-white p-6 neo-brutalism w-full max-w-sm space-y-4">
+                <h3 class="text-xl font-black">誰付的錢？</h3>
+                <div class="flex gap-4">
+                    <button @click="payer = '宜靜'" :class="payer === '宜靜' ? 'akatsuki-bg-red text-white' : 'bg-gray-100'" class="flex-1 py-3 font-black border-2 border-black">宜靜</button>
+                    <button @click="payer = '泰儒'" :class="payer === '泰儒' ? 'akatsuki-bg-red text-white' : 'bg-gray-100'" class="flex-1 py-3 font-black border-2 border-black">泰儒</button>
+                </div>
+                <h3 class="text-xl font-black pt-2">付了什麼？</h3>
+                <input type="text" x-model="note" class="w-full p-3 border-4 border-black font-bold" placeholder="例如：海底撈、地鐵票...">
+                <div class="flex gap-2">
+                    <button @click="showSaveModal = false" class="flex-1 py-3 font-black bg-gray-200">取消</button>
+                    <button @click="confirmSave()" class="flex-1 py-3 font-black akatsuki-bg-red text-white">確認儲存</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <footer class="fixed bottom-6 left-0 right-0 px-6 flex justify-center pointer-events-none">
+        <button @click="tab = 'home'" class="w-full max-w-xs py-4 akatsuki-bg-red text-white neo-brutalism font-black text-xl tracking-[0.3em] pointer-events-auto">
+            曉・首頁
+        </button>
     </footer>
 
     <script>
         function app() {
-            // ⚠️ 請在下方貼入你從第二關拿到的 URL
-            const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzmBJfgikpo3Ur8wMm94IN2E5_VckvZR-zuwqkM9ukrrYXf3kOvcgMtFn42Mkqp96MtEQ/exec"; 
-
             return {
-                tab: 'home', cnyInput: '', scheduleData: [],
-                async fetchSchedule() {
-                    const res = await fetch(SCRIPT_URL);
-                    this.scheduleData = await res.json();
+                tab: 'home', cnyInput: '', db: { Schedule: [], TravelInfo: [], Checklist: [] },
+                selectedDate: '', showSaveModal: false, payer: '宜靜', note: '',
+                const SCRIPT_URL: "https://script.google.com/macros/s/AKfycbzmBJfgikpo3Ur8wMm94IN2E5_VckvZR-zuwqkM9ukrrYXf3kOvcgMtFn42Mkqp96MtEQ/exec", // <--- 替換這裡
+
+                async initData() {
+                    const res = await fetch(this.SCRIPT_URL);
+                    this.db = await res.json();
+                    if (this.db.Schedule.length > 0) this.selectedDate = this.uniqueDates[0];
                 },
-                async handleInput(n) {
-                    if (n === 'C') { this.cnyInput = ''; }
-                    else if (n === 'SAVE') {
-                        if (!this.cnyInput) return;
-                        const payload = { cny: this.cnyInput, twd: Math.round(this.cnyInput * 4.5), payer: "旅伴" };
-                        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
-                        alert('已同步至雲端！');
-                        this.cnyInput = '';
-                    } else { if (this.cnyInput.length < 8) this.cnyInput += n; }
+                get uniqueDates() {
+                    return [...new Set(this.db.Schedule.map(i => i.Date))].sort();
+                },
+                get filteredSchedule() {
+                    return this.db.Schedule.filter(i => i.Date === this.selectedDate);
+                },
+                getInfo(cat) {
+                    const item = this.db.TravelInfo.find(i => i.Category === cat);
+                    return item ? item.Detail : '尚未輸入';
+                },
+                handleInput(n) {
+                    if (n === 'C') this.cnyInput = '';
+                    else if (n === 'SAVE') { if(this.cnyInput) this.showSaveModal = true; }
+                    else if (this.cnyInput.length < 8) this.cnyInput += n;
+                },
+                async confirmSave() {
+                    const payload = {
+                        cny: this.cnyInput, twd: Math.round(this.cnyInput * 4.5),
+                        payer: this.payer, note: this.note
+                    };
+                    await fetch(this.SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
+                    alert('已記帳！');
+                    this.showSaveModal = false; this.cnyInput = ''; this.note = '';
                 }
             }
         }
